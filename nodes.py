@@ -835,6 +835,8 @@ class ExpressionEditor:
         self.sample_image = None
         self.src_image = None
         self.crop_factor = None
+        self.face_infos =None
+        self.edited_faces = {}
 
     @classmethod
     def INPUT_TYPES(s):
@@ -842,6 +844,7 @@ class ExpressionEditor:
         #display = "slider"
         return {
             "required": {
+                "face_index": ("INT",{"default":0,"min":0,"max":"20","step":1}),
 
                 "rotate_pitch": ("FLOAT", {"default": 0, "min": -20, "max": 20, "step": 0.5, "display": display}),
                 "rotate_yaw": ("FLOAT", {"default": 0, "min": -20, "max": 20, "step": 0.5, "display": display}),
@@ -862,6 +865,7 @@ class ExpressionEditor:
                 "sample_parts": (["OnlyExpression", "OnlyRotation", "OnlyMouth", "OnlyEyes", "All"],),
                 "crop_factor": ("FLOAT", {"default": crop_factor_default,
                                           "min": crop_factor_min, "max": crop_factor_max, "step": 0.1}),
+               
             },
 
             "optional": {"src_image": ("IMAGE",), "motion_link": ("EDITOR_LINK",),
@@ -881,23 +885,27 @@ class ExpressionEditor:
     # INPUT_IS_LIST = False
     # OUTPUT_IS_LIST = (False,)
 
-    def run(self, rotate_pitch, rotate_yaw, rotate_roll, blink, eyebrow, wink, pupil_x, pupil_y, aaa, eee, woo, smile,
-            src_ratio, sample_ratio, sample_parts, crop_factor, src_image=None, sample_image=None, motion_link=None, add_exp=None):
+      def run(self, rotate_pitch, rotate_yaw, rotate_roll, blink, eyebrow, wink, pupil_x, pupil_y, aaa, eee, woo, smile,
+            src_ratio, sample_ratio, sample_parts, crop_factor, face_index, src_image=None, sample_image=None, motion_link=None, add_exp=None):
+          
+        
         rotate_yaw = -rotate_yaw
 
-        new_editor_link = None
-        if motion_link != None:
-            self.psi = motion_link[0]
-            new_editor_link = motion_link.copy()
-        elif src_image != None:
+        if src_image is not None:
             if id(src_image) != id(self.src_image) or self.crop_factor != crop_factor:
                 self.crop_factor = crop_factor
-                self.psi = g_engine.prepare_source(src_image, crop_factor)
                 self.src_image = src_image
-            new_editor_link = []
-            new_editor_link.append(self.psi)
+                self.face_infos = self.prepare_multiple_faces(src_image, crop_factor)
+                self.edited_faces = {}  # 重置已编辑的人脸状态
+            
+            if face_index >= len(self.face_infos):
+                raise ValueError(f"Face index {face_index} is out of range. Only {len(self.face_infos)} faces detected.")
+            
+            psi = self.face_infos[face_index]
+        elif motion_link is not None:
+            psi = motion_link[0]
         else:
-            return (None,None)
+            return (None, None, None)
 
         pipeline = g_engine.get_pipeline()
 
@@ -946,9 +954,31 @@ class ExpressionEditor:
 
         crop_out = pipeline.warp_decode(psi.f_s_user, psi.x_s_user, x_d_new)
         crop_out = pipeline.parse_output(crop_out['out'])[0]
-
+        
+         # 处理编辑后的人脸
+        out = self.src_image[0].copy() if self.src_image is not None else psi.src_rgb.copy()
+        face_region = psi.face_region
         crop_with_fullsize = cv2.warpAffine(crop_out, psi.crop_trans_m, get_rgb_size(psi.src_rgb), cv2.INTER_LINEAR)
-        out = np.clip(psi.mask_ori * crop_with_fullsize + (1 - psi.mask_ori) * psi.src_rgb, 0, 255).astype(np.uint8)
+        
+              # 更新当前编辑的人脸
+        self.edited_faces[face_index] = {
+            'region': face_region,
+            'image': crop_with_fullsize,
+            'mask': psi.mask_ori
+        }
+        
+        # 应用所有已编辑的人脸
+        for idx, face_data in self.edited_faces.items():
+            region = face_data['region']
+            face_img = face_data['image']
+            mask = face_data['mask']
+            
+            out[region[1]:region[3], region[0]:region[2]] = np.clip(
+                mask[region[1]:region[3], region[0]:region[2]] * face_img[region[1]:region[3], region[0]:region[2]] + 
+                (1 - mask[region[1]:region[3], region[0]:region[2]]) * out[region[1]:region[3], region[0]:region[2]], 
+                0, 255).astype(np.uint8)
+        
+        
 
         out_img = pil2tensor(out)
 
@@ -956,12 +986,28 @@ class ExpressionEditor:
         folder_paths.get_save_image_path(filename, folder_paths.get_temp_directory())
         img = Image.fromarray(crop_out)
         img.save(os.path.join(folder_paths.get_temp_directory(), filename), compress_level=1)
-        results = list()
-        results.append({"filename": filename, "type": "temp"})
+        results = [{"filename": filename, "type": "temp"}]
 
-        new_editor_link.append(es)
+        new_editor_link = [psi, es] if motion_link is None else motion_link.copy()
+
 
         return {"ui": {"images": results}, "result": (out_img, new_editor_link, es)}
+    
+    
+    def prepare_multiple_faces(self, src_image, crop_factor):
+        src_image_np = (src_image * 255).byte().numpy()
+        img_rgb = src_image_np[0]
+        
+        bboxes = g_engine.get_face_bboxes(img_rgb)
+        
+        face_infos = []
+        for bbox in bboxes:
+            face_region = [int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3])]
+            psi = g_engine.prepare_source(src_image, crop_factor, face_region=face_region)
+            psi.face_region = face_region
+            face_infos.append(psi)
+        
+        return face_infos
 
 NODE_CLASS_MAPPINGS = {
     "AdvancedLivePortrait": AdvancedLivePortrait,
