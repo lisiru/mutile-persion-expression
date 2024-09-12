@@ -1011,7 +1011,7 @@ class ExpressionEditor:
             f_s_user = engine.extract_feature_3d(i_s)
             x_s_user = engine.transform_keypoint(x_s_info)
         
-            psi = g_engine.PreparedSrcImg(img_rgb, crop_trans_m, x_s_info, f_s_user, x_s_user, mask_ori)
+            psi = PreparedSrcImg(img_rgb, crop_trans_m, x_s_info, f_s_user, x_s_user, mask_ori)
             psi.face_region = face_region
             face_infos.append(psi)
 
