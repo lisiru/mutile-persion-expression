@@ -990,12 +990,12 @@ class ExpressionEditor:
         face_infos = []
         for bbox in bboxes:
             crop_region = [int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3])]
-            face_region, is_changed = g_engine.calc_face_region(crop_region, g_engine.get_rgb_size(img_rgb))
+            face_region, is_changed = g_engine.calc_face_region(crop_region, get_rgb_size(img_rgb))
 
             s_x = (face_region[2] - face_region[0]) / 512.
             s_y = (face_region[3] - face_region[1]) / 512.
             crop_trans_m = g_engine.create_transform_matrix(crop_region[0], crop_region[1], s_x, s_y)
-            mask_ori = cv2.warpAffine(g_engine.GetMaskImg(), crop_trans_m, g_engine.get_rgb_size(img_rgb), cv2.INTER_LINEAR)
+            mask_ori = cv2.warpAffine(g_engine.GetMaskImg(), crop_trans_m, get_rgb_size(img_rgb), cv2.INTER_LINEAR)
             mask_ori = mask_ori.astype(np.float32) / 255.
 
             if is_changed:
