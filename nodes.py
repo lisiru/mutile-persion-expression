@@ -945,9 +945,16 @@ class ExpressionEditor:
         crop_out = pipeline.parse_output(crop_out['out'])[0]
         
         # 处理编辑后的人脸
-        out = self.src_image[0].copy() if self.src_image is not None else psi.src_rgb.copy()
+        if self.src_image is not None:
+            out = self.src_image[0].cpu().numpy()  # 转换Tensor为NumPy数组
+        else:
+            out = psi.src_rgb.copy()
+            
         face_region = psi.face_region
-        crop_with_fullsize = cv2.warpAffine(crop_out, psi.crop_trans_m, get_rgb_size(psi.src_rgb), cv2.INTER_LINEAR)
+        crop_with_fullsize = cv2.warpAffine(crop_out, psi.crop_trans_m, get_rgb_size(psi.src_rgb), cv2.INTER_LINEAR)  
+        
+        # 确保out是uint8类型
+        out = (out * 255).astype(np.uint8) if out.dtype != np.uint8 else out  
         
         # 更新当前编辑的人脸
         self.edited_faces[face_index] = {
