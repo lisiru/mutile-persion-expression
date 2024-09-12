@@ -980,18 +980,41 @@ class ExpressionEditor:
         return {"ui": {"images": results}, "result": (out_img, new_editor_link, es)}
     
     def prepare_multiple_faces(self, src_image, crop_factor):
-        src_image_np = (src_image * 255).byte().numpy()
-        img_rgb = src_image_np[0]
-        
+        print("Prepare multiple faces...")
+        engine = g_engine.get_pipeline()
+        source_image_np = (src_image * 255).byte().numpy()
+        img_rgb = source_image_np[0]
+
         bboxes = g_engine.get_face_bboxes(img_rgb)
-        
+    
         face_infos = []
         for bbox in bboxes:
-            face_region = [int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3])]
-            psi = g_engine.prepare_source(src_image, crop_factor)
+            crop_region = [int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3])]
+            face_region, is_changed = g_engine.calc_face_region(crop_region, g_engine.get_rgb_size(img_rgb))
+
+            s_x = (face_region[2] - face_region[0]) / 512.
+            s_y = (face_region[3] - face_region[1]) / 512.
+            crop_trans_m = g_engine.create_transform_matrix(crop_region[0], crop_region[1], s_x, s_y)
+            mask_ori = cv2.warpAffine(g_engine.GetMaskImg(), crop_trans_m, g_engine.get_rgb_size(img_rgb), cv2.INTER_LINEAR)
+            mask_ori = mask_ori.astype(np.float32) / 255.
+
+            if is_changed:
+                s = (crop_region[2] - crop_region[0]) / 512.
+                crop_trans_m = g_engine.create_transform_matrix(crop_region[0], crop_region[1], s, s)
+
+            face_img = g_engine.rgb_crop(img_rgb, face_region)
+            if is_changed:
+                face_img = g_engine.expand_img(face_img, crop_region)
+        
+            i_s = g_engine.prepare_src_image(face_img)
+            x_s_info = engine.get_kp_info(i_s)
+            f_s_user = engine.extract_feature_3d(i_s)
+            x_s_user = engine.transform_keypoint(x_s_info)
+        
+            psi = g_engine.PreparedSrcImg(img_rgb, crop_trans_m, x_s_info, f_s_user, x_s_user, mask_ori)
             psi.face_region = face_region
             face_infos.append(psi)
-        
+
         return face_infos
     
 NODE_CLASS_MAPPINGS = {
