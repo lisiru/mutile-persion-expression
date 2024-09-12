@@ -1011,7 +1011,7 @@ class ExpressionEditor:
 
 NODE_CLASS_MAPPINGS = {
     "AdvancedLivePortrait": AdvancedLivePortrait,
-    "ExpressionEditor": ExpressionEditor,
+    "MutilePersonExpressionEditor": ExpressionEditor,
     "LoadExpData": LoadExpData,
     "SaveExpData": SaveExpData,
     "ExpData": ExpData,
@@ -1020,7 +1020,7 @@ NODE_CLASS_MAPPINGS = {
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     "AdvancedLivePortrait": "Advanced Live Portrait (PHM)",
-    "ExpressionEditor": "Expression Editor (PHM)",
+    "MutilePersonExpressionEditor": "Mutile Person Expression Editor",
     "LoadExpData": "Load Exp Data (PHM)",
     "SaveExpData": "Save Exp Data (PHM)"
 }
