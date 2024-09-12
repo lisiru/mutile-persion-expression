@@ -994,13 +994,13 @@ class ExpressionEditor:
 
             s_x = (face_region[2] - face_region[0]) / 512.
             s_y = (face_region[3] - face_region[1]) / 512.
-            crop_trans_m = g_engine.create_transform_matrix(crop_region[0], crop_region[1], s_x, s_y)
+            crop_trans_m = create_transform_matrix(crop_region[0], crop_region[1], s_x, s_y)
             mask_ori = cv2.warpAffine(g_engine.GetMaskImg(), crop_trans_m, get_rgb_size(img_rgb), cv2.INTER_LINEAR)
             mask_ori = mask_ori.astype(np.float32) / 255.
 
             if is_changed:
                 s = (crop_region[2] - crop_region[0]) / 512.
-                crop_trans_m = g_engine.create_transform_matrix(crop_region[0], crop_region[1], s, s)
+                crop_trans_m = create_transform_matrix(crop_region[0], crop_region[1], s, s)
 
             face_img = g_engine.rgb_crop(img_rgb, face_region)
             if is_changed:
