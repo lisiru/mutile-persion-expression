@@ -1002,7 +1002,7 @@ class ExpressionEditor:
                 s = (crop_region[2] - crop_region[0]) / 512.
                 crop_trans_m = create_transform_matrix(crop_region[0], crop_region[1], s, s)
 
-            face_img = g_engine.rgb_crop(img_rgb, face_region)
+            face_img = rgb_crop(img_rgb, face_region)
             if is_changed:
                 face_img = g_engine.expand_img(face_img, crop_region)
         
