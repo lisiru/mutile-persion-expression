@@ -844,7 +844,7 @@ class ExpressionEditor:
         #display = "slider"
         return {
             "required": {
-                "face_index": ("INT",{"default":0,"min":0,"max":"20","step":1}),
+                "face_index": ("INT",{"default":0,"min":0,"max":20,"step":1}),
 
                 "rotate_pitch": ("FLOAT", {"default": 0, "min": -20, "max": 20, "step": 0.5, "display": display}),
                 "rotate_yaw": ("FLOAT", {"default": 0, "min": -20, "max": 20, "step": 0.5, "display": display}),
