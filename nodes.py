@@ -996,7 +996,26 @@ class ExpressionEditor:
     
         face_infos = []
         for bbox in bboxes:
-            crop_region = [int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3])]
+            x1, y1, x2, y2 = bbox
+            bbox_w = x2 - x1
+            bbox_h = y2 - y1
+
+            # 使用与原始方法相同的 crop_factor
+            crop_w = bbox_w * crop_factor
+            crop_h = bbox_h * crop_factor
+
+            crop_w = max(crop_h, crop_w)
+            crop_h = crop_w
+
+            kernel_x = int(x1 + bbox_w / 2)
+            kernel_y = int(y1 + bbox_h / 2)
+
+            new_x1 = max(0, int(kernel_x - crop_w / 2))
+            new_x2 = min(img_rgb.shape[1], int(kernel_x + crop_w / 2))
+            new_y1 = max(0, int(kernel_y - crop_h / 2))
+            new_y2 = min(img_rgb.shape[0], int(kernel_y + crop_h / 2))
+
+            crop_region = [new_x1, new_y1, new_x2, new_y2]
             face_region, is_changed = g_engine.calc_face_region(crop_region, get_rgb_size(img_rgb))
 
             s_x = (face_region[2] - face_region[0]) / 512.
