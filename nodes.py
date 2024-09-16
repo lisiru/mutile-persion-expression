@@ -8,7 +8,7 @@ import folder_paths
 import comfy.utils
 import time
 import copy
-sys.path.append('/data/miniconda/lib/python3.10/site-packages')
+#sys.path.append('/data/miniconda/lib/python3.10/site-packages')
 import dill
 import yaml
 from ultralytics import YOLO
